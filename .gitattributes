@@ -1,0 +1,8 @@
+# 줄바꿈 통일: Windows/WSL/macOS 팀원 간 gradlew 실행 오류 방지
+* text=auto
+/gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.jpg binary
