@@ -1,0 +1,70 @@
+# 공통 설정. 프로필별 설정은 아래 --- 구분선 뒤에 있다.
+# 비밀 값(메일 비밀번호, JWT 비밀키, DB 비밀번호)은 이 파일에 쓰지 말고
+# src/main/resources/application-local.yml(.gitignore 처리됨) 또는 환경변수로 넣는다.
+spring:
+  application:
+    name: lsrs
+  profiles:
+    default: dev
+  config:
+    import: optional:classpath:application-local.yml
+  jpa:
+    open-in-view: false
+  jackson:
+    time-zone: Asia/Seoul
+
+lsrs:
+  policy:                          # NFR 4.1: 정책 값은 여기서만 바꾼다
+    check-in-window: 15m           # FR-C-02 체크인 허용 시간
+    no-show-threshold: 3           # FR-X-12 이용 제한 노쇼 횟수
+    restriction-period: 3d         # FR-X-12 이용 제한 기간
+    no-show-scan-interval: 10m     # NFR 4.4 노쇼 스케줄러 주기
+    normal:                        # FR-A-20 평상시: 오늘~+7일, 최대 4시간
+      booking-days: 7
+      max-hours: 4
+    exam:                          # FR-A-20 시험기간: 당일·다음 날, 최대 3시간
+      booking-days: 1
+      max-hours: 3
+  jwt:                             # NFR 4.5 Access 1시간, Refresh 7일
+    secret: ${JWT_SECRET:dev-only-insecure-secret-change-me-0123456789abcdef}
+    access-token-ttl: 1h
+    refresh-token-ttl: 7d
+  seed:
+    enabled: false
+
+---
+# 개발: 메모리 H2 DB. 실행할 때마다 새로 만들고 초기 데이터를 넣는다.
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:lsrs;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  thymeleaf:
+    cache: false
+
+lsrs:
+  seed:
+    enabled: true
+
+---
+# 배포·시연용 MySQL 8. 실행: ./gradlew bootRun --args='--spring.profiles.active=mysql'
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/lsrs?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:lsrs}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update

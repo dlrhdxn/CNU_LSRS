@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('홈')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <h1>도서관 좌석 예약 시스템</h1>
+    <p>좌석 조회부터 예약, QR 체크인까지 한 흐름으로 이용할 수 있습니다.</p>
+    <p sec:authorize="isAnonymous()">
+        <a class="button" th:href="@{/login}">로그인</a>
+        <a class="button secondary" th:href="@{/signup}">회원가입</a>
+    </p>
+</main>
+</body>
+</html>

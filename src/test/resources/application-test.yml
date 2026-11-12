@@ -1,0 +1,8 @@
+# 테스트 전용: 내장 H2(테스트마다 자동 생성), 초기 데이터 없음
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+lsrs:
+  seed:
+    enabled: false
