@@ -1,0 +1,56 @@
+/* 공통 스타일. 기능별 스타일은 각 담당자가 별도 파일(예: seats.css)로 추가한다. */
+:root {
+    --primary: #1f5fae;
+    --primary-dark: #174a88;
+    --text: #222;
+    --muted: #666;
+    --border: #d9dee5;
+    --bg: #f6f8fb;
+    --danger: #c0392b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+}
+
+.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--primary);
+}
+
+.site-header a { color: #fff; text-decoration: none; }
+.site-header .brand { font-weight: 700; }
+.site-header nav { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.site-header .who { color: #dce7f5; font-size: 0.9em; }
+
+.container {
+    max-width: 960px;
+    margin: 24px auto;
+    padding: 0 16px;
+}
+
+.button {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--primary);
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button:hover { background: var(--primary-dark); }
+.button.secondary { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+
+.error-message { color: var(--danger); }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<!--
+  공통 레이아웃 조각. 각 화면에서 이렇게 사용한다:
+    <head th:replace="~{fragments/layout :: head('좌석 조회')}"></head>
+    <header th:replace="~{fragments/layout :: header}"></header>
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | LSRS'">LSRS</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <script th:src="@{/js/api.js}" defer></script>
+</head>
+<body>
+<header th:fragment="header" class="site-header">
+    <a class="brand" th:href="@{/}">LSRS 도서관 좌석 예약</a>
+    <nav>
+        <th:block sec:authorize="hasRole('STUDENT')">
+            <a th:href="@{/seats}">좌석 조회·예약</a>
+            <a th:href="@{/reservations/me}">내 예약</a>
+        </th:block>
+        <th:block sec:authorize="hasRole('KIOSK')">
+            <a th:href="@{/kiosk/check-in}">QR 체크인</a>
+        </th:block>
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <a th:href="@{/admin}">관리자</a>
+        </th:block>
+        <a sec:authorize="isAnonymous()" th:href="@{/login}">로그인</a>
+        <a sec:authorize="isAnonymous()" th:href="@{/signup}">회원가입</a>
+        <span sec:authorize="isAuthenticated()" class="who" sec:authentication="name"></span>
+    </nav>
+</header>
+</body>
+</html>
