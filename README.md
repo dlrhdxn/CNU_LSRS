@@ -82,13 +82,11 @@ src/main/resources
 
 ## 담당 (에픽 단위)
 
-| 담당 | 에픽 | Sprint 1 US | 주로 만드는 파일 |
-|---|---|---|---|
-| A | E1 회원·인증 | US-01 회원가입·이메일 인증, US-02 역할별 로그인 | `AuthController`, `AuthService`, `MailService`, `security/JwtProvider`, `security/JwtAuthFilter`, 로그인·가입 화면, `SecurityConfig`의 JWT 부분 |
-| B | E2 좌석 조회·예약 | US-03 좌석 조회, US-04 좌석 예약, US-05 예약 취소 | `SeatController`, `SeatService`, `ReservationController`, `ReservationService`, 좌석·내 예약 화면 |
-| C | E3 QR 체크인·노쇼 | US-07 QR 발급·확인, US-08 QR 체크인 | `QrController`(GET `/api/reservations/{id}/qr`), `CheckInController`, `CheckInService`, `QrTokenGenerator`, 체크인 단말 화면 |
-
-공통 파일(아래 "공유 파일 규칙")은 C가 관리한다.
+| 담당 | 에픽 | Sprint 1 | Sprint 2 | 주로 만드는 파일 |
+|---|---|---|---|---|
+| A | E1 회원·인증 | US-01 회원가입·이메일 인증<br>US-02 역할별 로그인 | — | `AuthController`, `AuthService`, `MailService`, `security/JwtProvider`, `security/JwtAuthFilter`, 로그인·가입 화면, `SecurityConfig`의 JWT 부분 |
+| B | E2 좌석 조회·예약<br>E3 노쇼 | US-03 좌석 조회<br>US-04 좌석 예약<br>US-05 예약 취소 | US-06 예약 이력<br>US-09 노쇼 자동 처리<br>US-10 반복 노쇼 이용 제한 | `SeatController`, `SeatService`, `ReservationController`, `ReservationService`, `NoShowScheduler`, `NoShowService`, 좌석·내 예약 화면 |
+| C | E3 QR 체크인<br>E4 관리자·운영 | US-07 QR 발급·확인<br>US-08 QR 체크인 | US-11 대시보드<br>US-12 이용 기록<br>US-13 제한 해제<br>US-14 시험기간 정책<br>US-15 강제 취소 | `QrController`(GET `/api/reservations/{id}/qr`), `CheckInController`, `CheckInService`, `QrTokenGenerator`, `AdminController`, `AdminService`, `PolicyController`, 체크인 단말·관리자 화면 |
 
 ## 협업 규칙
 
@@ -105,7 +103,7 @@ src/main/resources
 
 | 파일 | 규칙 |
 |---|---|
-| `domain/*` 엔티티 | 필드·상태 변경이 필요하면 **단톡에 먼저 공유 → 관리 담당(C)이 수정** |
+| `domain/*` 엔티티 | 필드·상태 변경이 필요하면 **단톡에 먼저 공유 → 필요한 사람이 수정해 PR로 리뷰** |
 | `repository/*` | 필요한 쿼리 메서드를 **추가만** 한다. 남이 만든 메서드는 고치지 않는다 |
 | `SecurityConfig` URL 규칙 | 설계서 API 목록 기준으로 이미 다 적혀 있다. 바꿔야 하면 공유 후 수정 |
 | `application.yml`, `build.gradle` | 공유 후 수정 (의존성 추가 등) |
