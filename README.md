@@ -11,6 +11,7 @@
 | Language | Java 17 |
 | Backend | Spring Boot 3.5.16 (Web, Security, Data JPA, Validation, Mail) |
 | Frontend | Thymeleaf + JavaScript(fetch) — 화면은 기능 확인용으로 단순하게 |
+| QR | ZXing — 체크인 payload PNG 생성 |
 | 인증 | JWT (Access 1시간 / Refresh 7일, HttpOnly 쿠키), BCrypt |
 | DB | H2 (개발·테스트) → MySQL 8 (시연) |
 | Build | Gradle 8.14.7 (Wrapper 포함, 별도 설치 불필요) |
@@ -51,6 +52,7 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 |---|---|---|---|---|
 | A-01 | 20230001 | 5분 전 ~ 2시간 뒤 | RESERVED | QR 체크인 (US-08). 시작 후 15분이 지나면 체크인 불가 → **앱을 재시작하면 다시 생성됨** |
 | A-02 | 20230002 | 2시간 뒤 ~ 4시간 뒤 | RESERVED | 취소 (US-05), 좌석 '예약됨' 표시 (US-03) |
+| A-04 | 20230001 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
 | A-03 | 20230002 | 30분 전 ~ 1시간 뒤 | CHECKED_IN | 좌석 '사용 중' 표시 (US-03) |
 
 ### [임시] 로그인 방법 — JWT 완성 전까지
@@ -77,8 +79,42 @@ src/main/java/com/cnu/lsrs
 src/main/resources
 ├── application.yml          정책 값(15분·3회·3일·7일/4시간 등) — NFR 4.1
 ├── templates/               Thymeleaf 화면 (fragments/layout.html 공통)
-└── static/                  css/common.css, js/api.js(fetch 공통 함수)
+│   ├── admin/dashboard.html
+│   └── reservations/qr.html
+└── static/                  css/common.css, css/admin.css, js/api.js 및 기능별 JS
 ```
+
+### 대표 화면 구조
+
+화면은 사용자 흐름별 페이지로 구성한다. 아래는 대표 사용자 화면이며, 체크인 단말 화면은 포함하지 않는다.
+
+| 화면 | 경로 | 주요 기능 | 접근 역할 |
+|---|---|---|---|
+| 로그인 | `/login` | 학생·관리자 인증 | 비로그인 |
+| 회원가입 | `/signup` | 학생 가입 및 이메일 인증 | 비로그인 |
+| 홈·좌석 현황 | `/` | 로그인 후 좌석 상태를 바로 조회하고 예약 | STUDENT, ADMIN |
+| 예약 기록 | `/reservations/me` | 내 예약 및 이용 이력 확인 | STUDENT, ADMIN |
+| 예약 QR | `/reservations/{id}/qr` | 선택한 예약의 체크인 QR 표시 | 예약 소유 STUDENT, ADMIN |
+| 관리자 대시보드 | `/admin` | 좌석·이용 현황 및 운영 관리 | ADMIN |
+
+학생과 관리자는 홈(`/`)에서 좌석 조회·예약·내 예약 기능을 사용할 수 있다. 관리자에게는 공통 네비게이션에 관리자 대시보드(`/admin`) 링크도 표시한다. QR은 예약 기록에서 해당 예약을 선택해 별도 화면으로 연다. `/api/...` 경로는 이 화면들이 데이터를 조회·변경할 때 사용하는 REST API이며, 화면 경로와 구분한다.
+
+### E3 QR 및 E4 관리자 API
+
+| Method | Endpoint | 권한 | 설명 |
+|---|---|---|---|
+| POST | `/api/check-in` | KIOSK | `{seatCode, qrToken}` 검증 후 체크인 |
+| GET | `/api/admin/seats` | ADMIN | 이용 인원·잔여 좌석·가동률·좌석별 상태; 대시보드는 10초마다 갱신 |
+| GET | `/api/admin/users?studentNo=` | ADMIN | 전체 사용자 목록 또는 학번 검색, 학생의 진행 중·예정 예약과 제한 상태 (지난 예약·노쇼 상세 이력 및 비밀번호 해시·인증 코드는 제외) |
+| GET | `/api/admin/statistics?startAt=&endAt=` | ADMIN | 지정 기간을 한 시간 단위로 나눠 실제 체크인 사용자 수·가동률과 기간 전체 평균 가동률 조회 |
+| PATCH | `/api/admin/{userId}/restriction` | ADMIN | 제한 설정·기간 변경 또는 해제 (해제 시 노쇼 횟수 0으로 초기화) |
+| PATCH | `/api/admin/{userId}/no-show-count` | ADMIN | 해당 학생의 누적 노쇼 횟수만 초기화 (이용 제한 상태는 유지) |
+| PATCH | `/api/admin/{userId}/role` | ADMIN | 사용자 역할을 `STUDENT`, `ADMIN`, `KIOSK` 중 하나로 변경 |
+| POST | `/api/admin/reservations/{id}/cancel` | ADMIN | 활성 예약 강제 취소 및 선택적 노쇼 패널티 |
+| GET, PUT | `/api/admin/policies` | ADMIN | 평상시·시험기간 정책 조회, 시험기간 설정 |
+| DELETE | `/api/admin/policies/exam` | ADMIN | 설정된 시험기간 정책 전체 해제; 기존 예약은 유지 |
+
+QR은 별도 데이터 API 없이 `/reservations/{id}/qr` 페이지에서 예약 소유자와 상태를 확인한 뒤, 페이지에 PNG를 직접 포함해 표시한다. 예약 토큰이 든 페이지 응답은 캐시하지 않는다. 정책의 시험기간 예약 일수·최대 시간은 `lsrs.policy.exam` 설정값을 사용한다.
 
 ## 담당 (에픽 단위)
 
@@ -86,7 +122,7 @@ src/main/resources
 |---|---|---|---|---|
 | A | E1 회원·인증 | US-01 회원가입·이메일 인증<br>US-02 역할별 로그인 | — | `AuthController`, `AuthService`, `MailService`, `security/JwtProvider`, `security/JwtAuthFilter`, 로그인·가입 화면, `SecurityConfig`의 JWT 부분 |
 | B | E2 좌석 조회·예약<br>E3 노쇼 | US-03 좌석 조회<br>US-04 좌석 예약<br>US-05 예약 취소 | US-06 예약 이력<br>US-09 노쇼 자동 처리<br>US-10 반복 노쇼 이용 제한 | `SeatController`, `SeatService`, `ReservationController`, `ReservationService`, `NoShowScheduler`, `NoShowService`, 좌석·내 예약 화면 |
-| C | E3 QR 체크인<br>E4 관리자·운영 | US-07 QR 발급·확인<br>US-08 QR 체크인 | US-11 대시보드<br>US-12 이용 기록<br>US-13 제한 해제<br>US-14 시험기간 정책<br>US-15 강제 취소 | `QrController`(GET `/api/reservations/{id}/qr`), `CheckInController`, `CheckInService`, `QrTokenGenerator`, `AdminController`, `AdminService`, `PolicyController`, 체크인 단말·관리자 화면 |
+| C | E3 QR 체크인<br>E4 관리자·운영 | US-07 QR 발급·확인<br>US-08 QR 체크인 | US-11 대시보드<br>US-12 이용 기록<br>US-13 제한 해제<br>US-14 시험기간 정책<br>US-15 강제 취소 | `QrPageController`, `ReservationQrService`, `QrCodeImageGenerator`, `CheckInController`, `CheckInService`, `QrTokenGenerator`, `AdminController`, `AdminService`, `PolicyService`, 관리자 화면 |
 
 ## 협업 규칙
 

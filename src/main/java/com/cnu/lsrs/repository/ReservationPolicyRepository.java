@@ -6,10 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 public interface ReservationPolicyRepository extends JpaRepository<ReservationPolicy, Long> {
 
 	Optional<ReservationPolicy> findFirstByPeriodTypeOrderByIdAsc(PeriodType periodType);
+
+	Optional<ReservationPolicy> findFirstByPeriodTypeOrderByIdDesc(PeriodType periodType);
+
+	List<ReservationPolicy> findAllByPeriodTypeOrderByStartDateDesc(PeriodType periodType);
+
+	long deleteAllByPeriodType(PeriodType periodType);
 
 	/** date를 포함하는 정책 중 가장 최근에 시작한 것 (시험기간 조회용) */
 	Optional<ReservationPolicy> findFirstByPeriodTypeAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(

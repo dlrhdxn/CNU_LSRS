@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.util.Objects;
 
 /**
  * 사용자 (학생·관리자·체크인 단말).
@@ -85,6 +87,10 @@ public class User {
 		this.verificationCode = null;
 	}
 
+	public void changeRole(Role role) {
+		this.role = Objects.requireNonNull(role, "role");
+	}
+
 	public boolean isActive() {
 		return accountStatus == AccountStatus.ACTIVE;
 	}
@@ -92,6 +98,37 @@ public class User {
 	/** now 시점에 이용 제한 중인지 (FR-R-12) */
 	public boolean isRestricted(LocalDateTime now) {
 		return restrictionUntil != null && now.isBefore(restrictionUntil);
+	}
+
+	public void setRestrictionUntil(LocalDateTime restrictionUntil) {
+		if (restrictionUntil == null) {
+			throw new IllegalArgumentException("제한 해제 시각은 필수입니다.");
+		}
+		this.restrictionUntil = restrictionUntil;
+	}
+
+	public void clearRestriction() {
+		this.restrictionUntil = null;
+		this.noShowCount = 0;
+	}
+
+	public void resetNoShowCount() {
+		this.noShowCount = 0;
+	}
+
+	public void recordNoShow(int threshold, Duration restrictionPeriod, LocalDateTime occurredAt) {
+		if (threshold < 1 || restrictionPeriod == null || restrictionPeriod.isNegative()
+				|| restrictionPeriod.isZero() || occurredAt == null) {
+			throw new IllegalArgumentException("노쇼 제한 정책이 올바르지 않습니다.");
+		}
+		noShowCount++;
+		if (noShowCount >= threshold) {
+			LocalDateTime automaticRelease = occurredAt.plus(restrictionPeriod);
+			if (restrictionUntil == null || restrictionUntil.isBefore(automaticRelease)) {
+				restrictionUntil = automaticRelease;
+			}
+			noShowCount = 0;
+		}
 	}
 
 	public Long getId() {

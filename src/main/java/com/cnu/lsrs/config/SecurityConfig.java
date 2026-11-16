@@ -81,12 +81,14 @@ public class SecurityConfig {
 								"/api/auth/register", "/api/auth/email-verification", "/api/auth/login").permitAll()
 						.requestMatchers("/", "/login", "/signup", "/verify-email").permitAll()
 
-						// E2 좌석·예약 (US-03~06), E3 QR 조회 (US-07): 학생
-						.requestMatchers("/api/seats/**", "/api/reservations/**").hasRole("STUDENT")
-						.requestMatchers("/seats/**", "/reservations/**").hasRole("STUDENT")
+						// 학생과 관리자 모두 좌석·예약 기능을 사용할 수 있다.
+						.requestMatchers("/api/seats/**", "/api/reservations/**")
+								.hasAnyRole("STUDENT", "ADMIN")
+						.requestMatchers("/seats/**", "/reservations/**")
+								.hasAnyRole("STUDENT", "ADMIN")
 
 						// E3 체크인 (US-08): 도서관 단말 계정
-						.requestMatchers("/api/check-ins/**", "/kiosk/**").hasRole("KIOSK")
+						.requestMatchers("/api/check-in/**").hasRole("KIOSK")
 
 						// E4 관리자 (US-11~15)
 						.requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")

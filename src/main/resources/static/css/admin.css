@@ -1,0 +1,57 @@
+.admin-page section {
+    margin: 28px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.metric-grid, .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.metric, .seat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.metric strong { font-size: 1.4rem; }
+.seat-in_use { background: #fce9e7; }
+.seat-check_in_pending { background: #fff3d6; }
+.seat-available { background: #e8f5e9; }
+.seat-unavailable { background: #eceff1; color: var(--muted); }
+
+.admin-page form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.admin-page input {
+    min-height: 36px;
+    padding: 6px;
+}
+
+.table-wrap { overflow-x: auto; }
+.admin-page table { width: 100%; border-collapse: collapse; background: #fff; }
+.admin-page th, .admin-page td { padding: 8px; border: 1px solid var(--border); text-align: left; }
+.history-entry { margin-bottom: 6px; }
+
+.admin-page dialog {
+    width: min(460px, calc(100% - 32px));
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.admin-page dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.admin-page dialog form { display: grid; align-items: center; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }

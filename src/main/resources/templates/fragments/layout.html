@@ -17,12 +17,9 @@
 <header th:fragment="header" class="site-header">
     <a class="brand" th:href="@{/}">LSRS 도서관 좌석 예약</a>
     <nav>
-        <th:block sec:authorize="hasRole('STUDENT')">
+        <th:block sec:authorize="hasAnyRole('STUDENT', 'ADMIN')">
             <a th:href="@{/seats}">좌석 조회·예약</a>
             <a th:href="@{/reservations/me}">내 예약</a>
-        </th:block>
-        <th:block sec:authorize="hasRole('KIOSK')">
-            <a th:href="@{/kiosk/check-in}">QR 체크인</a>
         </th:block>
         <th:block sec:authorize="hasRole('ADMIN')">
             <a th:href="@{/admin}">관리자</a>

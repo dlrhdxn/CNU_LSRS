@@ -100,13 +100,16 @@ public class DataInitializer implements ApplicationRunner {
 		// 2) 2시간 뒤 시작 → 취소 가능 (US-05), 좌석 '예약됨' 표시 (US-03)
 		reservationRepository.save(Reservation.create(student2, seats.get(1),
 				now.plusHours(2), now.plusHours(4), qrTokenGenerator.generate(), now.minusHours(1)));
-		// 3) 30분 전 시작, 체크인 완료 → 좌석 '사용 중' 표시 (US-03)
+		// 3) 1분 뒤 시작 → 예약 시작 직전 QR 체크인 동작 확인용
+		reservationRepository.save(Reservation.create(student1, seats.get(3),
+				now.plusMinutes(1), now.plusHours(2), qrTokenGenerator.generate(), now));
+		// 4) 30분 전 시작, 체크인 완료 → 좌석 '사용 중' 표시 (US-03)
 		Reservation checkedIn = Reservation.create(student2, seats.get(2),
 				now.minusMinutes(30), now.plusHours(1), qrTokenGenerator.generate(), now.minusHours(2));
 		checkedIn.checkIn(now.minusMinutes(25));
 		reservationRepository.save(checkedIn);
 
-		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 5개(비밀번호 {}), 예약 3건",
+		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 5개(비밀번호 {}), 예약 4건",
 				seats.size(), TEST_PASSWORD);
 	}
 }
