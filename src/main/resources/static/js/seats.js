@@ -90,7 +90,8 @@
     }
 
     async function reserve(seat) {
-        const q = query();
+        // 폼이 아니라 화면에 보이는 조회 결과의 날짜·시간으로 예약한다
+        const q = { date: current.date, startAt: current.startAt.slice(0, 5), endAt: current.endAt.slice(0, 5) };
         if (!confirm(`${seat.seatCode} 좌석을 ${q.date} ${q.startAt}~${q.endAt}에 예약할까요?`)) return;
         try {
             await api('/api/reservations', { method: 'POST', body: { seatId: seat.seatId, ...q } });
@@ -119,6 +120,7 @@
             }
             load();
         };
+        dialog.returnValue = ''; // Esc로 닫으면 이전 'confirm'이 남아 있으므로 초기화
         dialog.showModal();
     }
 
