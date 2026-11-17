@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('좌석 조회·예약')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <h1>좌석 조회·예약</h1>
+
+    <!-- FR-R-03: 현재 정책 표시 (시험기간이면 최대 이용 시간을 강조) -->
+    <p id="policy" class="policy"></p>
+
+    <form id="search" class="search">
+        <label>날짜 <input type="date" id="date" required></label>
+        <label>시작 <select id="startAt" required></select></label>
+        <label>종료 <select id="endAt" required></select></label>
+        <button type="submit" class="button">조회</button>
+    </form>
+
+    <p id="notice" class="error-message" hidden></p>
+
+    <ul class="legend">
+        <li><span class="seat AVAILABLE"></span>예약 가능</li>
+        <li><span class="seat IN_USE"></span>사용 중</li>
+        <li><span class="seat MINE"></span>내 예약</li>
+        <li><span class="seat RESERVED"></span>예약됨</li>
+        <li><span class="seat UNAVAILABLE"></span>사용 불가</li>
+    </ul>
+
+    <div id="grid"></div>
+    <p class="hint">예약 가능한 좌석을 누르면 예약하고, 내 예약 좌석을 누르면 취소할 수 있습니다.</p>
+
+    <!-- US-05: 취소 사유 선택 (FR-X-02) -->
+    <dialog id="cancelDialog">
+        <form method="dialog">
+            <h2>예약 취소</h2>
+            <p id="cancelTarget"></p>
+            <label>취소 사유
+                <select id="cancelReason">
+                    <option th:each="r : ${cancelReasons}" th:value="${r.name()}" th:text="${r.label}"></option>
+                </select>
+            </label>
+            <p class="hint">직접 취소는 노쇼로 기록되지 않습니다.</p>
+            <menu>
+                <button value="cancel" class="button secondary">닫기</button>
+                <button value="confirm" class="button danger">예약 취소</button>
+            </menu>
+        </form>
+    </dialog>
+</main>
+<link rel="stylesheet" th:href="@{/css/seats.css}">
+<script th:src="@{/js/seats.js}" defer></script>
+</body>
+</html>
