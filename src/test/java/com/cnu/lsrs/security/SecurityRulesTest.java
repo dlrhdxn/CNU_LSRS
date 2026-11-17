@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * URL별 권한 규칙 검증 (FR-U-12).
- * 아직 기능 컨트롤러가 없으므로, 권한을 통과하면 404(경로 없음), 막히면 401/403이 나온다.
+ * 권한을 통과하면 401/403이 아닌 응답(아직 없는 경로는 404, 파라미터가 빠지면 400 등), 막히면 401/403이 나온다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,6 +37,16 @@ class SecurityRulesTest {
 
 	@Autowired
 	PasswordEncoder passwordEncoder;
+
+	/** 인증·권한 필터는 통과했다 (401·403이 아니다). 그 뒤 컨트롤러 응답 코드는 상관없다 */
+	private static ResultMatcher passesSecurity() {
+		return result -> {
+			int code = result.getResponse().getStatus();
+			if (code == 401 || code == 403) {
+				throw new AssertionError("권한 검사에서 막혔습니다: " + code);
+			}
+		};
+	}
 
 	@BeforeEach
 	void setUp() {
@@ -75,8 +86,8 @@ class SecurityRulesTest {
 	@Test
 	@WithMockUser(roles = "STUDENT")
 	void 학생은_좌석_예약_API_권한을_통과한다() throws Exception {
-		mockMvc.perform(get("/api/seats")).andExpect(status().isNotFound());
-		mockMvc.perform(get("/api/reservations/me")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/seats")).andExpect(passesSecurity());
+		mockMvc.perform(get("/api/reservations/me")).andExpect(passesSecurity());
 	}
 
 	@Test
@@ -96,7 +107,7 @@ class SecurityRulesTest {
 	@Test
 	void 실제_계정으로_Basic_로그인하면_인증된다() throws Exception {
 		mockMvc.perform(get("/api/seats").with(httpBasic("20230001", "Test1234!")))
-				.andExpect(status().isNotFound()); // 인증·권한 통과 → 아직 컨트롤러 없음
+				.andExpect(passesSecurity());
 	}
 
 	@Test

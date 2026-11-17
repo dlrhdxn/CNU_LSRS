@@ -1,0 +1,39 @@
+/* 좌석 조회·예약 화면 (US-03~05) */
+.policy { padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 6px; }
+.policy .emph { color: var(--danger); }
+
+.search { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 16px 0; }
+.search label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9em; color: var(--muted); }
+.search input, .search select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 0; list-style: none; font-size: 0.9em; }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.legend .seat { width: 18px; height: 18px; padding: 0; }
+
+#grid h2 { font-size: 1em; margin: 20px 0 8px; }
+.seat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+
+.seat {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 56px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;
+    font: inherit; font-weight: 600; color: var(--text);
+}
+.seat small { font-weight: 400; font-size: 0.75em; }
+.seat:disabled { cursor: not-allowed; }
+.seat:not(:disabled) { cursor: pointer; }
+
+.seat.AVAILABLE { background: #e8f5e9; border-color: #66bb6a; }
+.seat.AVAILABLE:not(:disabled):hover { background: #c8e6c9; }
+.seat.IN_USE { background: #ffebee; border-color: #e57373; }
+.seat.MINE { background: #e3f2fd; border-color: var(--primary); color: var(--primary-dark); }
+.seat.RESERVED { background: #fff8e1; border-color: #ffb300; }
+.seat.UNAVAILABLE { background: #eceff1; border-color: #b0bec5; color: var(--muted); }
+
+.hint { color: var(--muted); font-size: 0.9em; }
+
+dialog { border: 1px solid var(--border); border-radius: 8px; padding: 20px; max-width: 360px; width: calc(100% - 32px); }
+dialog h2 { margin-top: 0; font-size: 1.1em; }
+dialog label { display: flex; flex-direction: column; gap: 4px; }
+dialog select { padding: 6px 8px; font: inherit; }
+dialog menu { display: flex; justify-content: flex-end; gap: 8px; padding: 0; margin: 16px 0 0; }
+.button.danger { background: var(--danger); }
