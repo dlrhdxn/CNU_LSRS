@@ -211,6 +211,15 @@ class SecurityRulesTest {
 	}
 
 	@Test
+	void PENDING_계정도_비밀번호가_틀리면_인증_화면_이동_정보를_받지_않는다() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20230003\",\"password\":\"wrong-password\"}"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+	}
+
+	@Test
 	void 회원가입은_충남대_이메일_도메인만_허용한다() throws Exception {
 		mockMvc.perform(post("/api/auth/register")
 						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)

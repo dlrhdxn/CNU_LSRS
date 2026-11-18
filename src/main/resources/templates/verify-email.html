@@ -5,6 +5,7 @@
 <header th:replace="~{fragments/layout :: header}"></header>
 <main class="container auth-container">
     <h1>이메일 인증</h1>
+    <p id="verificationPrompt" hidden></p>
     <form id="verifyForm">
         <label>학번 또는 로그인 ID
             <input name="studentNo" required>
@@ -17,6 +18,14 @@
     <p id="verifyNotice" class="error-message" hidden></p>
 </main>
 <script>
+const studentNo = new URLSearchParams(location.search).get("studentNo");
+if (studentNo) {
+    document.querySelector('#verifyForm [name="studentNo"]').value = studentNo;
+    const prompt = document.getElementById("verificationPrompt");
+    prompt.textContent = "이메일 인증이 완료되지 않은 계정입니다. 이메일로 받은 인증 코드를 입력해 주세요.";
+    prompt.hidden = false;
+}
+
 document.getElementById("verifyForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);

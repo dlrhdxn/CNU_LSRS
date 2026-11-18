@@ -41,6 +41,10 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 | 20230001 | STUDENT | ACTIVE |
 | 20230002 | STUDENT | ACTIVE |
 | 20230003 | STUDENT | PENDING (이메일 인증 전, 인증 코드 `123456`) → 로그인 불가 |
+| 20240001 | STUDENT | ACTIVE (예약 없음) |
+| 20240002 | STUDENT | ACTIVE (예약 있음, 시작 전이라 QR 접근 불가) |
+| 20240003 | STUDENT | ACTIVE (예약 시작 후 체크인 허용 시간 안, QR 발급 가능) |
+| 20240004 | STUDENT | ACTIVE (체크인 허용 시간 만료, 노쇼 처리 대기) |
 | admin | ADMIN | ACTIVE |
 | kiosk1 | KIOSK (체크인 단말) | ACTIVE |
 
@@ -52,8 +56,11 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 |---|---|---|---|---|
 | A-01 | 20230001 | 5분 전 ~ 2시간 뒤 | RESERVED | QR 체크인 (US-08). 시작 후 15분이 지나면 체크인 불가 → **앱을 재시작하면 다시 생성됨** |
 | A-02 | 20230002 | 2시간 뒤 ~ 4시간 뒤 | RESERVED | 취소 (US-05), 좌석 '예약됨' 표시 (US-03) |
-| A-04 | 20230004 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
+| A-04 | 20230001 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
 | A-03 | 20230002 | 30분 전 ~ 1시간 뒤 | CHECKED_IN | 좌석 '사용 중' 표시 (US-03) |
+| A-05 | 20240002 | 1시간 뒤 ~ 3시간 뒤 | RESERVED | 체크인 가능 시간 전, QR 직접 접근 차단 |
+| A-06 | 20240003 | 5분 전 ~ 2시간 뒤 | RESERVED | 체크인 허용 시간 내 QR 및 카운트다운 |
+| A-07 | 20240004 | 체크인 허용 시간보다 1분 더 전에 시작 ~ 1시간 뒤 | RESERVED | QR 접근 차단 및 노쇼 자동 처리 확인 |
 
 ### 로그인·회원가입
 

@@ -98,11 +98,11 @@ public class AuthService {
 		password = requireText(password);
 		User user = userRepository.findByStudentNo(loginId).orElseThrow(
 				() -> BusinessException.unauthorized("INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다."));
-		if (!user.isActive()) {
-			throw BusinessException.unauthorized("ACCOUNT_PENDING", "이메일 인증이 완료되지 않은 계정입니다.");
-		}
 		if (!passwordEncoder.matches(password, user.getPasswordHash())) {
 			throw BusinessException.unauthorized("INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
+		}
+		if (!user.isActive()) {
+			throw BusinessException.unauthorized("ACCOUNT_PENDING", "이메일 인증이 완료되지 않은 계정입니다.");
 		}
 		String accessToken = jwtProvider.createAccessToken(user.getId(), user.getStudentNo(), user.getRole());
 		String refreshToken = jwtProvider.createRefreshToken(user.getId(), user.getStudentNo(), user.getRole());

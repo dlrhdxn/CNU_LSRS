@@ -30,6 +30,11 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
         });
         location.href = "/";
     } catch (error) {
+        if (error.code === "ACCOUNT_PENDING") {
+            const studentNo = encodeURIComponent(form.get("loginId"));
+            location.href = `/verify-email?studentNo=${studentNo}`;
+            return;
+        }
         notice.textContent = error.message;
         notice.hidden = false;
     }

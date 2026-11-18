@@ -1,5 +1,6 @@
 package com.cnu.lsrs.service;
 
+import com.cnu.lsrs.config.LsrsProperties;
 import com.cnu.lsrs.domain.Reservation;
 import com.cnu.lsrs.domain.ReservationPolicy;
 import com.cnu.lsrs.domain.ReservationStatus;
@@ -39,14 +40,17 @@ public class SeatService {
 	private final PolicyService policyService;
 	private final BookingRules bookingRules;
 	private final Clock clock;
+	private final LsrsProperties properties;
 
 	public SeatService(SeatRepository seatRepository, ReservationRepository reservationRepository,
-					   PolicyService policyService, BookingRules bookingRules, Clock clock) {
+					   PolicyService policyService, BookingRules bookingRules, Clock clock,
+					   LsrsProperties properties) {
 		this.seatRepository = seatRepository;
 		this.reservationRepository = reservationRepository;
 		this.policyService = policyService;
 		this.bookingRules = bookingRules;
 		this.clock = clock;
+		this.properties = properties;
 	}
 
 	public SeatAvailability getAvailability(Long userId, LocalDate date, LocalTime startAt, LocalTime endAt) {
@@ -62,6 +66,9 @@ public class SeatService {
 
 		Map<Long, List<Reservation>> bySeat = new HashMap<>();
 		for (Reservation r : overlapping) {
+			if (!r.blocksSeatAt(now, properties.policy().checkInWindow())) {
+				continue;
+			}
 			bySeat.computeIfAbsent(r.getSeat().getId(), k -> new ArrayList<>()).add(r);
 		}
 

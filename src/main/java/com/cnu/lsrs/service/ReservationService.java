@@ -93,10 +93,13 @@ public class ReservationService {
 
 		LocalDateTime from = LocalDateTime.of(date, startAt);
 		LocalDateTime to = LocalDateTime.of(date, endAt);
-		if (reservationRepository.existsSeatOverlap(seatId, from, to, ACTIVE)) {
+		List<Reservation> overlapping = reservationRepository.findOverlapping(from, to, ACTIVE).stream()
+				.filter(reservation -> reservation.blocksSeatAt(now, properties.policy().checkInWindow()))
+				.toList();
+		if (overlapping.stream().anyMatch(reservation -> reservation.getSeat().getId().equals(seatId))) {
 			throw BusinessException.conflict("SEAT_ALREADY_RESERVED", "이미 예약된 좌석입니다. 다른 좌석이나 시간대를 선택해 주세요.");
 		}
-		if (reservationRepository.existsUserOverlap(userId, from, to, ACTIVE)) {
+		if (overlapping.stream().anyMatch(reservation -> reservation.getUser().getId().equals(userId))) {
 			throw BusinessException.conflict("USER_TIME_OVERLAP", "같은 시간대에 이미 다른 예약이 있습니다.");
 		}
 

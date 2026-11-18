@@ -78,6 +78,13 @@ public class DataInitializer implements ApplicationRunner {
 		User student1 = userRepository.save(User.createActive("20230001", "student1@lsrs.test", hash, Role.STUDENT));
 		User student2 = userRepository.save(User.createActive("20230002", "student2@lsrs.test", hash, Role.STUDENT));
 		userRepository.save(User.createPendingStudent("20230003", "pending@lsrs.test", hash, "123456"));
+		userRepository.save(User.createActive("20240001", "student20240001@lsrs.test", hash, Role.STUDENT));
+		User student20240002 = userRepository.save(
+				User.createActive("20240002", "student20240002@lsrs.test", hash, Role.STUDENT));
+		User student20240003 = userRepository.save(
+				User.createActive("20240003", "student20240003@lsrs.test", hash, Role.STUDENT));
+		User student20240004 = userRepository.save(
+				User.createActive("20240004", "student20240004@lsrs.test", hash, Role.STUDENT));
 		userRepository.save(User.createActive("admin", "admin@lsrs.test", hash, Role.ADMIN));
 		userRepository.save(User.createActive("kiosk1", "kiosk1@lsrs.test", hash, Role.KIOSK));
 
@@ -109,7 +116,18 @@ public class DataInitializer implements ApplicationRunner {
 		checkedIn.checkIn(now.minusMinutes(25));
 		reservationRepository.save(checkedIn);
 
-		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 5개(비밀번호 {}), 예약 4건",
+		// 5) 예약 시작 전: 체크인 시간이 아직 열리지 않아 QR 페이지 접근 불가
+		reservationRepository.save(Reservation.create(student20240002, seats.get(4),
+				now.plusHours(1), now.plusHours(3), qrTokenGenerator.generate(), now));
+		// 6) 예약 시작 후 체크인 허용 시간 안: QR 발급·카운트다운 확인용
+		reservationRepository.save(Reservation.create(student20240003, seats.get(5),
+				now.minusMinutes(5), now.plusHours(2), qrTokenGenerator.generate(), now));
+		// 7) 체크인 허용 시간 경과: QR 페이지 접근 불가, 노쇼 자동 처리 확인용
+		LocalDateTime expiredStart = now.minus(properties.policy().checkInWindow()).minusMinutes(1);
+		reservationRepository.save(Reservation.create(student20240004, seats.get(6),
+				expiredStart, now.plusHours(1), qrTokenGenerator.generate(), now));
+
+		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 9개(비밀번호 {}), 예약 7건",
 				seats.size(), TEST_PASSWORD);
 	}
 }
