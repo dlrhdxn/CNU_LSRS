@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('로그인')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container auth-container">
+    <h1>로그인</h1>
+    <form id="loginForm">
+        <label>학번 또는 로그인 ID
+            <input name="loginId" autocomplete="username" required>
+        </label>
+        <label>비밀번호
+            <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="button" type="submit">로그인</button>
+    </form>
+    <p id="loginNotice" class="error-message" hidden></p>
+    <p><a th:href="@{/signup}">회원가입</a></p>
+</main>
+<script>
+document.getElementById("loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const notice = document.getElementById("loginNotice");
+    notice.hidden = true;
+    try {
+        await api("/api/auth/login", {
+            method: "POST",
+            body: { loginId: form.get("loginId"), password: form.get("password") }
+        });
+        location.href = "/";
+    } catch (error) {
+        notice.textContent = error.message;
+        notice.hidden = false;
+    }
+});
+</script>
+</body>
+</html>

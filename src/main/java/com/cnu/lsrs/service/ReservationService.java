@@ -16,9 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -30,6 +33,7 @@ public class ReservationService {
 	private static final List<ReservationStatus> ACTIVE =
 			List.of(ReservationStatus.RESERVED, ReservationStatus.CHECKED_IN);
 	private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	private final ReservationRepository reservationRepository;
 	private final SeatRepository seatRepository;
@@ -128,5 +132,40 @@ public class ReservationService {
 		}
 		reservation.cancelByStudent(reason);
 		return ReservationResult.from(reservation);
+	}
+
+	@Transactional(readOnly = true)
+	public List<MyReservation> getMyReservations(Long userId) {
+		LocalDateTime now = LocalDateTime.now(clock);
+		return reservationRepository.findAllByUser_IdOrderByCreatedAtDesc(userId).stream()
+				.map(reservation -> {
+					LocalDateTime checkInDeadline =
+							reservation.getStartAt().plus(properties.policy().checkInWindow());
+					boolean qrAvailable = reservation.getStatus() == ReservationStatus.RESERVED
+							&& !now.isBefore(reservation.getStartAt())
+							&& !now.isAfter(checkInDeadline);
+					return new MyReservation(
+							reservation.getId(),
+							reservation.getSeat().getSeatCode(),
+							reservation.getStartAt().format(DATE_TIME),
+							reservation.getEndAt().format(DATE_TIME),
+							reservation.getStatus().name(),
+							reservation.getCancelReason() == null ? null : reservation.getCancelReason().getLabel(),
+							reservation.getStartAt().atZone(SEOUL).toInstant().toEpochMilli(),
+							reservation.getEndAt().atZone(SEOUL).toInstant().toEpochMilli(),
+							reservation.getStatus().isActive()
+									? Math.max(0, Duration.between(now, reservation.getEndAt()).toSeconds())
+									: null,
+							qrAvailable,
+							qrAvailable ? Math.max(0, (Duration.between(now, checkInDeadline).toMillis() + 999) / 1000)
+									: null);
+				})
+				.toList();
+	}
+
+	public record MyReservation(Long reservationId, String seatCode, String startAt, String endAt,
+								String status, String cancelReason, long startAtEpochMillis,
+								long endAtEpochMillis, Long remainingSeconds, boolean qrAvailable,
+								Long qrRemainingSeconds) {
 	}
 }

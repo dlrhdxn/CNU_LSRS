@@ -67,4 +67,11 @@ body {
 .auth-container form { display: grid; gap: 14px; }
 .auth-container label { display: grid; gap: 6px; }
 .auth-container input { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 6px; }
+.email-input { display: flex; align-items: center; gap: 6px; }
+.email-input input { min-width: 0; flex: 1; }
+.email-input select { max-width: 150px; padding: 9px; border: 1px solid var(--border); border-radius: 6px; }
 .auth-container .hint { margin: 0; color: var(--muted); }
+.reservation-list { display: grid; gap: 12px; }
+.reservation-card { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.reservation-card h2 { margin-top: 0; }
+.reservation-remaining { font-weight: 700; }

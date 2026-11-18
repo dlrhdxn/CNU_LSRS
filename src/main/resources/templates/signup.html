@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('회원가입')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container auth-container">
+    <h1>회원가입</h1>
+    <form id="signupForm">
+        <label>학번
+            <input name="studentNo" autocomplete="username" required>
+        </label>
+        <label for="emailLocalPart">학교 이메일</label>
+        <div class="email-input">
+            <input id="emailLocalPart" type="text" autocomplete="username"
+                   pattern="[A-Za-z0-9._%+-]+" title="이메일 아이디를 입력하세요." required>
+            <span>@</span>
+            <select id="emailDomain" aria-label="이메일 도메인">
+                <option value="o.cnu.ac.kr">o.cnu.ac.kr</option>
+                <option value="cnu.ac.kr">cnu.ac.kr</option>
+            </select>
+        </div>
+        <label>비밀번호
+            <input name="password" type="password" autocomplete="new-password" required>
+        </label>
+        <p class="hint">8자 이상, 영문·숫자·특수문자를 모두 포함하세요.</p>
+        <button class="button" type="submit">가입 신청</button>
+    </form>
+    <p id="signupNotice" class="error-message" hidden></p>
+</main>
+<script>
+document.getElementById("signupForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const notice = document.getElementById("signupNotice");
+    notice.hidden = true;
+    try {
+        await api("/api/auth/register", {
+            method: "POST",
+            body: {
+                studentNo: form.get("studentNo"),
+                email: `${document.getElementById("emailLocalPart").value.trim()}@${document.getElementById("emailDomain").value}`,
+                password: form.get("password")
+            }
+        });
+        location.href = "/verify-email";
+    } catch (error) {
+        notice.textContent = error.message;
+        notice.hidden = false;
+    }
+});
+</script>
+</body>
+</html>

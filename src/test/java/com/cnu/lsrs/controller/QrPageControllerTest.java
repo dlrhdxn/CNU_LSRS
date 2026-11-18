@@ -5,6 +5,7 @@ import com.cnu.lsrs.domain.Reservation;
 import com.cnu.lsrs.domain.Role;
 import com.cnu.lsrs.domain.Seat;
 import com.cnu.lsrs.domain.User;
+import com.cnu.lsrs.config.LsrsProperties;
 import com.cnu.lsrs.repository.NoShowRecordRepository;
 import com.cnu.lsrs.repository.ReservationRepository;
 import com.cnu.lsrs.repository.SeatRepository;
@@ -57,6 +58,9 @@ class QrPageControllerTest {
 
 	@Autowired
 	Clock clock;
+
+	@Autowired
+	LsrsProperties properties;
 
 	private Long ownerId;
 
@@ -113,11 +117,64 @@ class QrPageControllerTest {
 				.andExpect(jsonPath("$.code").value("QR_NOT_AVAILABLE"));
 	}
 
+	@Test
+	void 내_예약_화면에_예약_시간과_QR_링크와_남은_시간이_표시된다() throws Exception {
+		Reservation reservation = createReservation("my-reservation-token");
+
+		mockMvc.perform(get("/reservations/me").with(httpBasic("20230001", PASSWORD)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("좌석 A-01")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString(
+						"/reservations/" + reservation.getId() + "/qr")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("class=\"qr-countdown\"")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("data-seconds=")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("data-start=")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("data-end=")));
+	}
+
+	@Test
+	void 예약_시작_전에는_QR링크와_URL_접근을_차단한다() throws Exception {
+		Reservation reservation = createReservation("early-qr-token", LocalDateTime.now(clock).plusMinutes(1));
+
+		mockMvc.perform(get("/reservations/{id}/qr", reservation.getId())
+						.with(httpBasic("20230001", PASSWORD)))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("QR_NOT_AVAILABLE"));
+
+		mockMvc.perform(get("/reservations/me").with(httpBasic("20230001", PASSWORD)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+						"/reservations/" + reservation.getId() + "/qr"))))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("예약 시작 시각부터 체크인 QR")));
+	}
+
+	@Test
+	void 체크인_허용_시간이_지난_QR_URL과_링크를_차단한다() throws Exception {
+		LocalDateTime expiredStart = LocalDateTime.now(clock)
+				.minus(properties.policy().checkInWindow()).minusSeconds(1);
+		Reservation reservation = createReservation("expired-qr-token", expiredStart);
+
+		mockMvc.perform(get("/reservations/{id}/qr", reservation.getId())
+						.with(httpBasic("20230001", PASSWORD)))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("QR_NOT_AVAILABLE"));
+
+		mockMvc.perform(get("/reservations/me").with(httpBasic("20230001", PASSWORD)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+						"/reservations/" + reservation.getId() + "/qr"))))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("체크인 가능 시간이 지나")));
+	}
+
 	private Reservation createReservation(String qrToken) {
+		return createReservation(qrToken, LocalDateTime.now(clock).minusMinutes(1));
+	}
+
+	private Reservation createReservation(String qrToken, LocalDateTime startAt) {
 		LocalDateTime now = LocalDateTime.now(clock);
 		User owner = userRepository.findById(ownerId).orElseThrow();
 		Seat seat = seatRepository.save(Seat.create("A-01", "1층 열람실 A"));
-		return reservationRepository.save(Reservation.create(owner, seat, now.plusMinutes(1),
+		return reservationRepository.save(Reservation.create(owner, seat, startAt,
 				now.plusHours(2), qrToken, now));
 	}
 }

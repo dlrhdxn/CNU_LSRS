@@ -32,7 +32,6 @@ import java.io.IOException;
 
 /**
  * URL별 접근 권한 (FR-U-12, NFR 4.5). 설계서 4장 API 목록 기준으로 Sprint 1·2 경로를 모두 미리 정해 둔다.
- *
  * JwtAuthFilter로 쿠키·Bearer JWT 인증을 적용한다.
  * HTTP Basic은 기존 개발·테스트 호환용으로만 남아 있다.
  */

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 예약')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <h1>내 예약 및 이용 이력</h1>
+    <p th:if="${#lists.isEmpty(reservations)}">예약 내역이 없습니다.</p>
+    <div th:unless="${#lists.isEmpty(reservations)}" class="reservation-list">
+        <article class="reservation-card" th:each="reservation : ${reservations}">
+            <h2 th:text="|좌석 ${reservation.seatCode}|">좌석 A-01</h2>
+            <p>
+                <span th:text="${reservation.startAt}">시작</span>
+                –
+                <span th:text="${reservation.endAt}">종료</span>
+            </p>
+            <p>상태: <span th:text="${reservation.status}">RESERVED</span></p>
+            <p th:if="${reservation.cancelReason != null}"
+               th:text="|취소 사유: ${reservation.cancelReason}|"></p>
+            <p class="reservation-remaining"
+               th:if="${reservation.remainingSeconds != null}"
+               th:attr="data-start=${reservation.startAtEpochMillis},
+                        data-end=${reservation.endAtEpochMillis},
+                        data-now=${nowEpochMillis}"></p>
+            <a th:if="${reservation.qrAvailable}"
+               class="button" th:href="@{/reservations/{id}/qr(id=${reservation.reservationId})}">체크인 QR 보기</a>
+            <p class="qr-countdown"
+               th:if="${reservation.qrRemainingSeconds != null}"
+               th:attr="data-seconds=${reservation.qrRemainingSeconds}"></p>
+            <p th:if="${reservation.status == 'RESERVED' and !reservation.qrAvailable and nowEpochMillis < reservation.startAtEpochMillis}">
+                예약 시작 시각부터 체크인 QR을 사용할 수 있습니다.
+            </p>
+            <p th:if="${reservation.status == 'RESERVED' and !reservation.qrAvailable and nowEpochMillis > reservation.startAtEpochMillis}">
+                체크인 가능 시간이 지나 QR을 사용할 수 없습니다.
+            </p>
+        </article>
+    </div>
+</main>
+<script th:src="@{/js/my-reservations.js}" defer></script>
+</body>
+</html>

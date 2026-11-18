@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +41,9 @@ class SecurityRulesTest {
 
 	@Autowired
 	PasswordEncoder passwordEncoder;
+
+	@MockBean
+	com.cnu.lsrs.service.MailService mailService;
 
 	/** 인증·권한 필터는 통과했다 (401·403이 아니다). 그 뒤 컨트롤러 응답 코드는 상관없다 */
 	private static ResultMatcher passesSecurity() {
@@ -177,7 +181,7 @@ class SecurityRulesTest {
 	void 회원가입_후_이메일_인증하면_로그인할_수_있다() throws Exception {
 		mockMvc.perform(post("/api/auth/register")
 						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-						.content("{\"studentNo\":\"20239999\",\"email\":\"new@lsrs.test\",\"password\":\"Test1234!\"}"))
+						.content("{\"studentNo\":\"20239999\",\"email\":\"new@o.cnu.ac.kr\",\"password\":\"Test1234!\"}"))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.loginId").value("20239999"))
 				.andExpect(jsonPath("$.accountStatus").value("PENDING"));
@@ -204,5 +208,14 @@ class SecurityRulesTest {
 						.content("{\"loginId\":\"20230003\",\"password\":\"Test1234!\"}"))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.code").value("ACCOUNT_PENDING"));
+	}
+
+	@Test
+	void 회원가입은_충남대_이메일_도메인만_허용한다() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239998\",\"email\":\"student@gmail.com\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_EMAIL_DOMAIN"));
 	}
 }
