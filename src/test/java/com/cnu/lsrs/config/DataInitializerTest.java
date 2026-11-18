@@ -36,7 +36,7 @@ class DataInitializerTest {
 
 	@Test
 	void 초기_데이터가_생성된다() {
-		assertThat(userRepository.count()).isEqualTo(5);
+		assertThat(userRepository.count()).isEqualTo(6);
 		assertThat(seatRepository.count()).isEqualTo(20);
 		assertThat(policyRepository.count()).isEqualTo(1);
 		assertThat(reservationRepository.count()).isEqualTo(4);

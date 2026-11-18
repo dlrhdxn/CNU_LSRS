@@ -77,6 +77,7 @@ public class DataInitializer implements ApplicationRunner {
 		String hash = passwordEncoder.encode(TEST_PASSWORD);
 		User student1 = userRepository.save(User.createActive("20230001", "student1@lsrs.test", hash, Role.STUDENT));
 		User student2 = userRepository.save(User.createActive("20230002", "student2@lsrs.test", hash, Role.STUDENT));
+		User student4 = userRepository.save(User.createActive("20230004", "student4@lsrs.test", hash, Role.STUDENT));
 		userRepository.save(User.createPendingStudent("20230003", "pending@lsrs.test", hash, "123456"));
 		userRepository.save(User.createActive("admin", "admin@lsrs.test", hash, Role.ADMIN));
 		userRepository.save(User.createActive("kiosk1", "kiosk1@lsrs.test", hash, Role.KIOSK));
@@ -101,7 +102,8 @@ public class DataInitializer implements ApplicationRunner {
 		reservationRepository.save(Reservation.create(student2, seats.get(1),
 				now.plusHours(2), now.plusHours(4), qrTokenGenerator.generate(), now.minusHours(1)));
 		// 3) 1분 뒤 시작 → 예약 시작 직전 QR 체크인 동작 확인용
-		reservationRepository.save(Reservation.create(student1, seats.get(3),
+		//    20230001은 1)번 예약과 시간이 겹치므로 다른 학생에게 건다 (FR-R-11: 같은 학생 시간 겹침 불가)
+		reservationRepository.save(Reservation.create(student4, seats.get(3),
 				now.plusMinutes(1), now.plusHours(2), qrTokenGenerator.generate(), now));
 		// 4) 30분 전 시작, 체크인 완료 → 좌석 '사용 중' 표시 (US-03)
 		Reservation checkedIn = Reservation.create(student2, seats.get(2),
@@ -109,7 +111,7 @@ public class DataInitializer implements ApplicationRunner {
 		checkedIn.checkIn(now.minusMinutes(25));
 		reservationRepository.save(checkedIn);
 
-		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 5개(비밀번호 {}), 예약 4건",
+		log.info("[seed] 초기 데이터 생성 완료: 좌석 {}개, 계정 6개(비밀번호 {}), 예약 4건",
 				seats.size(), TEST_PASSWORD);
 	}
 }
