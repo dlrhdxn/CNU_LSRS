@@ -27,6 +27,9 @@
         <a sec:authorize="isAnonymous()" th:href="@{/login}">로그인</a>
         <a sec:authorize="isAnonymous()" th:href="@{/signup}">회원가입</a>
         <span sec:authorize="isAuthenticated()" class="who" sec:authentication="name"></span>
+        <form sec:authorize="isAuthenticated()" th:action="@{/api/auth/logout}" method="post" class="logout-form">
+            <button id="logoutButton" type="submit" class="logout-button">로그아웃</button>
+        </form>
     </nav>
 </header>
 </body>

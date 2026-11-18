@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -39,6 +41,9 @@ class SecurityRulesTest {
 
 	@Autowired
 	PasswordEncoder passwordEncoder;
+
+	@MockBean
+	com.cnu.lsrs.service.MailService mailService;
 
 	/** 인증·권한 필터는 통과했다 (401·403이 아니다). 그 뒤 컨트롤러 응답 코드는 상관없다 */
 	private static ResultMatcher passesSecurity() {
@@ -67,8 +72,8 @@ class SecurityRulesTest {
 
 	@Test
 	void 회원가입과_로그인_API는_비로그인도_통과한다() throws Exception {
-		mockMvc.perform(post("/api/auth/register")).andExpect(status().isNotFound());
-		mockMvc.perform(post("/api/auth/login")).andExpect(status().isNotFound());
+		mockMvc.perform(post("/api/auth/register")).andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/auth/login")).andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -170,5 +175,56 @@ class SecurityRulesTest {
 	void 이메일_인증_전_PENDING_계정은_로그인할_수_없다() throws Exception {
 		mockMvc.perform(get("/api/seats").with(httpBasic("20230003", "Test1234!")))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void 회원가입_후_이메일_인증하면_로그인할_수_있다() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239999\",\"email\":\"new@o.cnu.ac.kr\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.loginId").value("20239999"))
+				.andExpect(jsonPath("$.accountStatus").value("PENDING"));
+
+		User pending = userRepository.findByStudentNo("20239999").orElseThrow();
+		mockMvc.perform(post("/api/auth/email-verification")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239999\",\"code\":\"" + pending.getVerificationCode() + "\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.accountStatus").value("ACTIVE"));
+
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20239999\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.role").value("STUDENT"))
+				.andExpect(header().exists("Set-Cookie"));
+	}
+
+	@Test
+	void PENDING_계정은_JWT_로그인을_할_수_없다() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20230003\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("ACCOUNT_PENDING"));
+	}
+
+	@Test
+	void PENDING_계정도_비밀번호가_틀리면_인증_화면_이동_정보를_받지_않는다() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20230003\",\"password\":\"wrong-password\"}"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+	}
+
+	@Test
+	void 회원가입은_충남대_이메일_도메인만_허용한다() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239998\",\"email\":\"student@gmail.com\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_EMAIL_DOMAIN"));
 	}
 }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('이메일 인증')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container auth-container">
+    <h1>이메일 인증</h1>
+    <p id="verificationPrompt" hidden></p>
+    <form id="verifyForm">
+        <label>학번 또는 로그인 ID
+            <input name="studentNo" required>
+        </label>
+        <label>인증 코드
+            <input name="code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
+        </label>
+        <button class="button" type="submit">인증 완료</button>
+    </form>
+    <p id="verifyNotice" class="error-message" hidden></p>
+</main>
+<script>
+const studentNo = new URLSearchParams(location.search).get("studentNo");
+if (studentNo) {
+    document.querySelector('#verifyForm [name="studentNo"]').value = studentNo;
+    const prompt = document.getElementById("verificationPrompt");
+    prompt.textContent = "이메일 인증이 완료되지 않은 계정입니다. 이메일로 받은 인증 코드를 입력해 주세요.";
+    prompt.hidden = false;
+}
+
+document.getElementById("verifyForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const notice = document.getElementById("verifyNotice");
+    notice.hidden = true;
+    try {
+        await api("/api/auth/email-verification", {
+            method: "POST",
+            body: { studentNo: form.get("studentNo"), code: form.get("code") }
+        });
+        location.href = "/login";
+    } catch (error) {
+        notice.textContent = error.message;
+        notice.hidden = false;
+    }
+});
+</script>
+</body>
+</html>

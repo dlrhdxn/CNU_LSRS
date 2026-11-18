@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.Objects;
 
 /**
@@ -130,6 +131,15 @@ public class Reservation {
 
 	public boolean isOwnedBy(Long userId) {
 		return user.getId() != null && user.getId().equals(userId);
+	}
+
+	/** 미체크인 예약은 체크인 마감이 지난 뒤 다른 이용자의 좌석을 점유하지 않는다. */
+	public boolean blocksSeatAt(LocalDateTime now, Duration checkInWindow) {
+		if (status == ReservationStatus.CHECKED_IN) {
+			return true;
+		}
+		return status == ReservationStatus.RESERVED
+				&& !now.isAfter(startAt.plus(checkInWindow));
 	}
 
 	/** [startAt, endAt) 구간이 [otherStart, otherEnd)와 겹치는지. 끝 시각과 다음 시작 시각이 같으면 겹치지 않는다. */

@@ -1,6 +1,8 @@
 package com.cnu.lsrs.controller;
 
 import com.cnu.lsrs.domain.ReservationPolicy;
+import com.cnu.lsrs.domain.Reservation;
+import com.cnu.lsrs.domain.ReservationStatus;
 import com.cnu.lsrs.domain.Role;
 import com.cnu.lsrs.domain.Seat;
 import com.cnu.lsrs.domain.User;
@@ -24,6 +26,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -117,6 +122,49 @@ class SeatReservationApiTest {
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("SEAT_ALREADY_RESERVED"))
 				.andExpect(jsonPath("$.message").isNotEmpty());
+	}
+
+	@Test
+	void 노쇼_처리된_좌석은_다른_학생에게_예약_가능으로_보이고_다시_예약된다() throws Exception {
+		User owner = userRepository.findByStudentNo("20230001").orElseThrow();
+		Reservation noShow = Reservation.create(owner, a01,
+				LocalDateTime.of(2026, 11, 19, 8, 0),
+				LocalDateTime.of(2026, 11, 19, 11, 0),
+				"no-show-seat-token", LocalDateTime.of(2026, 11, 19, 7, 0));
+		noShow.autoCancel();
+		reservationRepository.save(noShow);
+
+		mockMvc.perform(get("/api/seats").with(as("20230002"))
+						.param("date", "2026-11-19").param("startAt", "10:00").param("endAt", "11:00"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.seats[0].state").value("AVAILABLE"));
+
+		mockMvc.perform(post("/api/reservations").with(as("20230002"))
+						.contentType(MediaType.APPLICATION_JSON).content(body("10:00", "11:00")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.status").value("RESERVED"));
+	}
+
+	@Test
+	void 체크인_마감이_지난_미처리_예약도_다른_학생에게_가용_좌석으로_표시된다() throws Exception {
+		User owner = userRepository.findByStudentNo("20230001").orElseThrow();
+		reservationRepository.save(Reservation.create(owner, a01,
+				LocalDateTime.of(2026, 11, 19, 8, 0),
+				LocalDateTime.of(2026, 11, 19, 11, 0),
+				"expired-unprocessed-token", LocalDateTime.of(2026, 11, 19, 7, 0)));
+
+		mockMvc.perform(get("/api/seats").with(as("20230002"))
+						.param("date", "2026-11-19").param("startAt", "10:00").param("endAt", "11:00"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.seats[0].state").value("AVAILABLE"));
+
+		mockMvc.perform(post("/api/reservations").with(as("20230002"))
+						.contentType(MediaType.APPLICATION_JSON).content(body("10:00", "11:00")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.status").value("RESERVED"));
+		assertThat(reservationRepository.findAll().stream()
+				.filter(reservation -> "expired-unprocessed-token".equals(reservation.getQrToken()))
+				.findFirst().orElseThrow().getStatus()).isEqualTo(ReservationStatus.RESERVED);
 	}
 
 	@Test

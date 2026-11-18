@@ -42,6 +42,10 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 | 20230002 | STUDENT | ACTIVE |
 | 20230004 | STUDENT | ACTIVE |
 | 20230003 | STUDENT | PENDING (이메일 인증 전, 인증 코드 `123456`) → 로그인 불가 |
+| 20240001 | STUDENT | ACTIVE (예약 없음) |
+| 20240002 | STUDENT | ACTIVE (예약 있음, 시작 전이라 QR 접근 불가) |
+| 20240003 | STUDENT | ACTIVE (예약 시작 후 체크인 허용 시간 안, QR 발급 가능) |
+| 20240004 | STUDENT | ACTIVE (체크인 허용 시간 만료, 노쇼 처리 대기) |
 | admin | ADMIN | ACTIVE |
 | kiosk1 | KIOSK (체크인 단말) | ACTIVE |
 
@@ -53,18 +57,19 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 |---|---|---|---|---|
 | A-01 | 20230001 | 5분 전 ~ 2시간 뒤 | RESERVED | QR 체크인 (US-08). 시작 후 15분이 지나면 체크인 불가 → **앱을 재시작하면 다시 생성됨** |
 | A-02 | 20230002 | 2시간 뒤 ~ 4시간 뒤 | RESERVED | 취소 (US-05), 좌석 '예약됨' 표시 (US-03) |
-| A-04 | 20230004 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
+| A-04 | 20230001 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
 | A-03 | 20230002 | 30분 전 ~ 1시간 뒤 | CHECKED_IN | 좌석 '사용 중' 표시 (US-03) |
+| A-05 | 20240002 | 1시간 뒤 ~ 3시간 뒤 | RESERVED | 체크인 가능 시간 전, QR 직접 접근 차단 |
+| A-06 | 20240003 | 5분 전 ~ 2시간 뒤 | RESERVED | 체크인 허용 시간 내 QR 및 카운트다운 |
+| A-07 | 20240004 | 체크인 허용 시간보다 1분 더 전에 시작 ~ 1시간 뒤 | RESERVED | QR 접근 차단 및 노쇼 자동 처리 확인 |
 
-### [임시] 로그인 방법 — JWT 완성 전까지
+### 로그인·회원가입
 
-지금은 **HTTP Basic 인증**으로 위 계정을 쓸 수 있다.
-
-- Postman: `Authorization → Basic Auth`에 ID/비밀번호 입력
-- curl: `curl -u 20230001:Test1234! http://localhost:8080/api/...`
-- 브라우저: 로그인이 필요한 화면에 들어가면 로그인 창이 뜬다
-
-E1 담당자가 JWT 로그인을 완성하면 이 방식은 제거된다 (`SecurityConfig` 주석 참고).
+- 브라우저: `/login`에서 학번/ID와 비밀번호로 로그인한다. Access/Refresh JWT는 HttpOnly 쿠키로 전달된다.
+- 회원가입은 `/signup`에서 신청하고 `/verify-email`에서 6자리 코드를 입력한다. 이메일 SMTP 설정이 없으면 개발 환경에서 코드가 애플리케이션 로그에 기록된다.
+- API: `POST /api/auth/login`으로 로그인하고, 이후 쿠키를 사용하거나 `Authorization: Bearer <access-token>` 헤더를 보낼 수 있다. `POST /api/auth/refresh`는 Refresh 쿠키로 토큰을 갱신한다.
+- 로그아웃은 공통 네비게이션의 버튼으로 수행하며 Access/Refresh 쿠키를 삭제한다.
+- 테스트 호환용: 기존 개발 도구에서는 HTTP Basic 인증을 계속 사용할 수 있다.
 
 ## 프로젝트 구조 (설계서 2장 논리 아키텍처)
 
@@ -74,16 +79,19 @@ src/main/java/com/cnu/lsrs
 ├── service/      Application: 비즈니스 로직, @Transactional 경계
 ├── repository/   Persistence: Spring Data JPA
 ├── domain/       Domain: 엔티티(User, Seat, Reservation, NoShowRecord, ReservationPolicy)와 Enum
-├── security/     LoginUser(로그인 사용자), UserDetailsService (+ JWT 필터 예정)
+├── security/     LoginUser(로그인 사용자), UserDetailsService, JwtProvider, JwtAuthFilter
 ├── config/       SecurityConfig, Clock, 정책 설정(LsrsProperties), 초기 데이터
 └── common/       예외 처리 (BusinessException, GlobalExceptionHandler)
 src/main/resources
 ├── application.yml          정책 값(15분·3회·3일·7일/4시간 등) — NFR 4.1
 ├── templates/               Thymeleaf 화면 (fragments/layout.html 공통)
+│   ├── login.html, signup.html, verify-email.html
 │   ├── admin/dashboard.html
-│   └── reservations/qr.html
-└── static/                  css/common.css, css/admin.css, js/api.js 및 기능별 JS
+│   └── reservations/me.html, reservations/qr.html
+└── static/                  CSS 및 API·좌석·내 예약 JavaScript
 ```
+
+모든 Thymeleaf 페이지 경로는 `PageController`에서 처리하고, REST API는 기능별 Controller에서 처리한다. 내 예약 화면(`/reservations/me`)은 로그인한 사용자의 예약 이력, 진행 중 예약의 남은 시간, QR 발급이 가능한 예약의 QR 링크를 제공한다.
 
 ### 대표 화면 구조
 
@@ -93,12 +101,25 @@ src/main/resources
 |---|---|---|---|
 | 로그인 | `/login` | 학생·관리자 인증 | 비로그인 |
 | 회원가입 | `/signup` | 학생 가입 및 이메일 인증 | 비로그인 |
-| 홈·좌석 현황 | `/` | 로그인 후 좌석 상태를 바로 조회하고 예약 | STUDENT, ADMIN |
-| 예약 기록 | `/reservations/me` | 내 예약 및 이용 이력 확인 | STUDENT, ADMIN |
-| 예약 QR | `/reservations/{id}/qr` | 선택한 예약의 체크인 QR 표시 | 예약 소유 STUDENT, ADMIN |
+| 홈 | `/` | 서비스 안내 및 로그인·회원가입 이동 | 전체 |
+| 좌석 조회·예약 | `/seats` | 좌석 상태 조회와 예약·취소 | STUDENT, ADMIN |
+| 예약 기록 | `/reservations/me` | 내 예약·이력과 이용 종료까지 남은 시간 확인; 예약 시작 후 체크인 15분 동안 QR 버튼·마감 카운트다운 표시 | STUDENT, ADMIN |
+| 예약 QR | `/reservations/{id}/qr` | 체크인 가능 시간(예약 시작~15분) 내 본인 예약 QR 표시 | 예약 소유 STUDENT, ADMIN |
 | 관리자 대시보드 | `/admin` | 좌석·이용 현황 및 운영 관리 | ADMIN |
 
-학생과 관리자는 홈(`/`)에서 좌석 조회·예약·내 예약 기능을 사용할 수 있다. 관리자에게는 공통 네비게이션에 관리자 대시보드(`/admin`) 링크도 표시한다. QR은 예약 기록에서 해당 예약을 선택해 별도 화면으로 연다. `/api/...` 경로는 이 화면들이 데이터를 조회·변경할 때 사용하는 REST API이며, 화면 경로와 구분한다.
+학생과 관리자는 공통 네비게이션에서 좌석 조회와 내 예약에 접근할 수 있다. 관리자에게는 관리자 대시보드 링크도 표시한다. QR은 내 예약에서 해당 예약을 선택해 별도 화면으로 연다. `/api/...` 경로는 화면과 구분되는 REST API다.
+
+### E1 인증 API
+
+| Method | Endpoint | 설명 |
+|---|---|---|
+| POST | `/api/auth/register` | 학생 회원가입, PENDING 계정 생성 및 6자리 이메일 인증 코드 발송 |
+| POST | `/api/auth/email-verification` | 학번 또는 이메일과 인증 코드로 계정 활성화 |
+| POST | `/api/auth/login` | 학번/관리자 ID와 비밀번호 검증, Access·Refresh JWT를 HttpOnly 쿠키로 발급 |
+| POST | `/api/auth/refresh` | Refresh 쿠키 검증 후 JWT 쿠키 갱신 |
+| POST | `/api/auth/logout` | Access·Refresh 쿠키 삭제 후 로그인 화면으로 이동 |
+
+비밀번호는 8자 이상이며 영문·숫자·특수문자를 포함해야 한다. JWT 기본 만료 시간은 Access 1시간, Refresh 7일이다. 이메일 인증 전인 PENDING 계정은 로그인할 수 없다. 예약 QR은 예약 시작 시각부터 설정된 체크인 허용 시간(기본 15분) 안에서만 열 수 있으며, 그 전·후의 직접 URL 접근은 거부된다.
 
 ### E3 QR 및 E4 관리자 API
 
@@ -121,9 +142,9 @@ QR은 별도 데이터 API 없이 `/reservations/{id}/qr` 페이지에서 예약
 
 | 담당 | 에픽 | Sprint 1 | Sprint 2 | 주로 만드는 파일 |
 |---|---|---|---|---|
-| A | E1 회원·인증 | US-01 회원가입·이메일 인증<br>US-02 역할별 로그인 | — | `AuthController`, `AuthService`, `MailService`, `security/JwtProvider`, `security/JwtAuthFilter`, 로그인·가입 화면, `SecurityConfig`의 JWT 부분 |
+| A | E1 회원·인증 | US-01 회원가입·이메일 인증<br>US-02 역할별 로그인 | — | `AuthController`, `AuthService`, `MailService`, `security/JwtProvider`, `security/JwtAuthFilter`, 인증 화면, `SecurityConfig` |
 | B | E2 좌석 조회·예약<br>E3 노쇼 | US-03 좌석 조회<br>US-04 좌석 예약<br>US-05 예약 취소 | US-06 예약 이력<br>US-09 노쇼 자동 처리<br>US-10 반복 노쇼 이용 제한 | `SeatController`, `SeatService`, `ReservationController`, `ReservationService`, `NoShowScheduler`, `NoShowService`, 좌석·내 예약 화면 |
-| C | E3 QR 체크인<br>E4 관리자·운영 | US-07 QR 발급·확인<br>US-08 QR 체크인 | US-11 대시보드<br>US-12 이용 기록<br>US-13 제한 해제<br>US-14 시험기간 정책<br>US-15 강제 취소 | `QrPageController`, `ReservationQrService`, `QrCodeImageGenerator`, `CheckInController`, `CheckInService`, `QrTokenGenerator`, `AdminController`, `AdminService`, `PolicyService`, 관리자 화면 |
+| C | E3 QR 체크인<br>E4 관리자·운영 | US-07 QR 발급·확인<br>US-08 QR 체크인 | US-11 대시보드<br>US-12 이용 기록<br>US-13 제한 해제<br>US-14 시험기간 정책<br>US-15 강제 취소 | `PageController`, `ReservationQrService`, `QrCodeImageGenerator`, `CheckInController`, `CheckInService`, `QrTokenGenerator`, `AdminController`, `AdminService`, `PolicyService`, 관리자 화면 |
 
 ## 협업 규칙
 

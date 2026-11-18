@@ -1,6 +1,7 @@
 package com.cnu.lsrs.config;
 
 import com.cnu.lsrs.common.exception.ErrorResponse;
+import com.cnu.lsrs.security.JwtAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,33 +25,30 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 import java.io.IOException;
 
 /**
  * URL별 접근 권한 (FR-U-12, NFR 4.5). 설계서 4장 API 목록 기준으로 Sprint 1·2 경로를 모두 미리 정해 둔다.
- *
- * [임시] 지금은 HTTP Basic 인증으로 테스트 계정 로그인이 된다 (Postman: Authorization → Basic Auth).
- * A(E1 인증 담당)가 JwtAuthFilter를 완성하면:
- *   1) httpBasic(...) 줄을 지우고 JwtAuthFilter를 addFilterBefore로 등록
- *   2) 화면 요청의 미인증 처리(pageEntryPoint)를 /login 리다이렉트로 변경
- * 나머지 URL 규칙은 그대로 둔다.
+ * JwtAuthFilter로 쿠키·Bearer JWT 인증을 적용한다.
+ * HTTP Basic은 기존 개발·테스트 호환용으로만 남아 있다.
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
 	private final ObjectMapper objectMapper;
+	private final JwtAuthFilter jwtAuthFilter;
 
-	/** [임시] 화면 요청 미인증 시 브라우저 Basic 로그인 창. A가 로그인 화면을 만들면 /login 리다이렉트로 교체 */
+	/** 화면 요청 미인증 시 로그인 페이지로 이동한다. */
 	private final AuthenticationEntryPoint pageEntryPoint;
 
-	public SecurityConfig(ObjectMapper objectMapper) {
+	public SecurityConfig(ObjectMapper objectMapper, JwtAuthFilter jwtAuthFilter) {
 		this.objectMapper = objectMapper;
-		BasicAuthenticationEntryPoint basic = new BasicAuthenticationEntryPoint();
-		basic.setRealmName("LSRS");
-		this.pageEntryPoint = basic;
+		this.jwtAuthFilter = jwtAuthFilter;
+		this.pageEntryPoint = new LoginUrlAuthenticationEntryPoint("/login");
 	}
 
 	@Bean
@@ -67,7 +65,8 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.formLogin(AbstractHttpConfigurer::disable)
 				.logout(AbstractHttpConfigurer::disable) // 로그아웃은 POST /api/auth/logout (A 담당)
-				.httpBasic(Customizer.withDefaults()) // [임시] JWT 완성 전까지 사용
+				.httpBasic(Customizer.withDefaults()) // 개발·기존 테스트 호환용
+				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 				.exceptionHandling(ex -> ex
 						.authenticationEntryPoint(this::handleUnauthenticated)
 						.accessDeniedHandler(accessDeniedHandler()))
@@ -78,7 +77,8 @@ public class SecurityConfig {
 
 						// E1 회원·인증 (US-01, US-02): 비로그인 허용
 						.requestMatchers(HttpMethod.POST,
-								"/api/auth/register", "/api/auth/email-verification", "/api/auth/login").permitAll()
+								"/api/auth/register", "/api/auth/email-verification",
+								"/api/auth/login", "/api/auth/refresh").permitAll()
 						.requestMatchers("/", "/login", "/signup", "/verify-email").permitAll()
 
 						// 학생과 관리자 모두 좌석·예약 기능을 사용할 수 있다.
@@ -114,7 +114,7 @@ public class SecurityConfig {
 		return http.build();
 	}
 
-	/** 미인증: API는 401 JSON, 화면은 [임시] 브라우저 Basic 로그인 창 */
+	/** 미인증: API는 401 JSON, 화면은 로그인 페이지로 이동 */
 	private void handleUnauthenticated(HttpServletRequest request, HttpServletResponse response,
 									   AuthenticationException e) throws IOException, ServletException {
 		if (isApiRequest(request)) {

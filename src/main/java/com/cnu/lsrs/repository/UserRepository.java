@@ -17,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	/** 로그인 ID(학번 또는 관리자·단말 ID)로 조회 (FR-U-10) */
 	Optional<User> findByStudentNo(String studentNo);
 
+	Optional<User> findByEmail(String email);
+
 	List<User> findAllByRoleOrderByStudentNoAsc(Role role);
 
 	// ---- B (US-04) ----

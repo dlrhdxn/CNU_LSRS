@@ -16,9 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -30,6 +33,7 @@ public class ReservationService {
 	private static final List<ReservationStatus> ACTIVE =
 			List.of(ReservationStatus.RESERVED, ReservationStatus.CHECKED_IN);
 	private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	private final ReservationRepository reservationRepository;
 	private final SeatRepository seatRepository;
@@ -89,10 +93,13 @@ public class ReservationService {
 
 		LocalDateTime from = LocalDateTime.of(date, startAt);
 		LocalDateTime to = LocalDateTime.of(date, endAt);
-		if (reservationRepository.existsSeatOverlap(seatId, from, to, ACTIVE)) {
+		List<Reservation> overlapping = reservationRepository.findOverlapping(from, to, ACTIVE).stream()
+				.filter(reservation -> reservation.blocksSeatAt(now, properties.policy().checkInWindow()))
+				.toList();
+		if (overlapping.stream().anyMatch(reservation -> reservation.getSeat().getId().equals(seatId))) {
 			throw BusinessException.conflict("SEAT_ALREADY_RESERVED", "이미 예약된 좌석입니다. 다른 좌석이나 시간대를 선택해 주세요.");
 		}
-		if (reservationRepository.existsUserOverlap(userId, from, to, ACTIVE)) {
+		if (overlapping.stream().anyMatch(reservation -> reservation.getUser().getId().equals(userId))) {
 			throw BusinessException.conflict("USER_TIME_OVERLAP", "같은 시간대에 이미 다른 예약이 있습니다.");
 		}
 
@@ -128,5 +135,40 @@ public class ReservationService {
 		}
 		reservation.cancelByStudent(reason);
 		return ReservationResult.from(reservation);
+	}
+
+	@Transactional(readOnly = true)
+	public List<MyReservation> getMyReservations(Long userId) {
+		LocalDateTime now = LocalDateTime.now(clock);
+		return reservationRepository.findAllByUser_IdOrderByCreatedAtDesc(userId).stream()
+				.map(reservation -> {
+					LocalDateTime checkInDeadline =
+							reservation.getStartAt().plus(properties.policy().checkInWindow());
+					boolean qrAvailable = reservation.getStatus() == ReservationStatus.RESERVED
+							&& !now.isBefore(reservation.getStartAt())
+							&& !now.isAfter(checkInDeadline);
+					return new MyReservation(
+							reservation.getId(),
+							reservation.getSeat().getSeatCode(),
+							reservation.getStartAt().format(DATE_TIME),
+							reservation.getEndAt().format(DATE_TIME),
+							reservation.getStatus().name(),
+							reservation.getCancelReason() == null ? null : reservation.getCancelReason().getLabel(),
+							reservation.getStartAt().atZone(SEOUL).toInstant().toEpochMilli(),
+							reservation.getEndAt().atZone(SEOUL).toInstant().toEpochMilli(),
+							reservation.getStatus().isActive()
+									? Math.max(0, Duration.between(now, reservation.getEndAt()).toSeconds())
+									: null,
+							qrAvailable,
+							qrAvailable ? Math.max(0, (Duration.between(now, checkInDeadline).toMillis() + 999) / 1000)
+									: null);
+				})
+				.toList();
+	}
+
+	public record MyReservation(Long reservationId, String seatCode, String startAt, String endAt,
+								String status, String cancelReason, long startAtEpochMillis,
+								long endAtEpochMillis, Long remainingSeconds, boolean qrAvailable,
+								Long qrRemainingSeconds) {
 	}
 }
