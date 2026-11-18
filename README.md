@@ -40,6 +40,7 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 |---|---|---|
 | 20230001 | STUDENT | ACTIVE |
 | 20230002 | STUDENT | ACTIVE |
+| 20230004 | STUDENT | ACTIVE |
 | 20230003 | STUDENT | PENDING (이메일 인증 전, 인증 코드 `123456`) → 로그인 불가 |
 | admin | ADMIN | ACTIVE |
 | kiosk1 | KIOSK (체크인 단말) | ACTIVE |
