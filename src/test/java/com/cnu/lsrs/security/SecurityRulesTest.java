@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -67,8 +68,8 @@ class SecurityRulesTest {
 
 	@Test
 	void 회원가입과_로그인_API는_비로그인도_통과한다() throws Exception {
-		mockMvc.perform(post("/api/auth/register")).andExpect(status().isNotFound());
-		mockMvc.perform(post("/api/auth/login")).andExpect(status().isNotFound());
+		mockMvc.perform(post("/api/auth/register")).andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/auth/login")).andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -170,5 +171,38 @@ class SecurityRulesTest {
 	void 이메일_인증_전_PENDING_계정은_로그인할_수_없다() throws Exception {
 		mockMvc.perform(get("/api/seats").with(httpBasic("20230003", "Test1234!")))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void 회원가입_후_이메일_인증하면_로그인할_수_있다() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239999\",\"email\":\"new@lsrs.test\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.loginId").value("20239999"))
+				.andExpect(jsonPath("$.accountStatus").value("PENDING"));
+
+		User pending = userRepository.findByStudentNo("20239999").orElseThrow();
+		mockMvc.perform(post("/api/auth/email-verification")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"studentNo\":\"20239999\",\"code\":\"" + pending.getVerificationCode() + "\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.accountStatus").value("ACTIVE"));
+
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20239999\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.role").value("STUDENT"))
+				.andExpect(header().exists("Set-Cookie"));
+	}
+
+	@Test
+	void PENDING_계정은_JWT_로그인을_할_수_없다() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"loginId\":\"20230003\",\"password\":\"Test1234!\"}"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("ACCOUNT_PENDING"));
 	}
 }

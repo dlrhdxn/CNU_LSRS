@@ -55,15 +55,11 @@ IntelliJ: `File → Open`으로 이 폴더를 열고 `LsrsApplication` 실행.
 | A-04 | 20230004 | 1분 뒤 ~ 2시간 뒤 | RESERVED | 예약 시작 전후 QR 체크인 테스트 |
 | A-03 | 20230002 | 30분 전 ~ 1시간 뒤 | CHECKED_IN | 좌석 '사용 중' 표시 (US-03) |
 
-### [임시] 로그인 방법 — JWT 완성 전까지
+### 로그인 방법
 
-지금은 **HTTP Basic 인증**으로 위 계정을 쓸 수 있다.
-
-- Postman: `Authorization → Basic Auth`에 ID/비밀번호 입력
-- curl: `curl -u 20230001:Test1234! http://localhost:8080/api/...`
-- 브라우저: 로그인이 필요한 화면에 들어가면 로그인 창이 뜬다
-
-E1 담당자가 JWT 로그인을 완성하면 이 방식은 제거된다 (`SecurityConfig` 주석 참고).
+- 브라우저: `/login`에서 학번/ID와 비밀번호로 로그인한다. Access/Refresh JWT는 HttpOnly 쿠키로 전달된다.
+- API: `POST /api/auth/login` 응답을 받은 뒤 쿠키를 사용하거나 `Authorization: Bearer <access-token>`을 보낼 수 있다.
+- 테스트 호환용: 기존 개발 도구에서는 HTTP Basic 인증을 계속 사용할 수 있다.
 
 ## 프로젝트 구조 (설계서 2장 논리 아키텍처)
 

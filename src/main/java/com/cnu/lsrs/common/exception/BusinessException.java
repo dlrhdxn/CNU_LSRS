@@ -30,6 +30,10 @@ public class BusinessException extends RuntimeException {
 		return new BusinessException(HttpStatus.NOT_FOUND, code, message);
 	}
 
+	public static BusinessException unauthorized(String code, String message) {
+		return new BusinessException(HttpStatus.UNAUTHORIZED, code, message);
+	}
+
 	public static BusinessException conflict(String code, String message) {
 		return new BusinessException(HttpStatus.CONFLICT, code, message);
 	}

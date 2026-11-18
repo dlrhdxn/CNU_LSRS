@@ -11,4 +11,19 @@ public class PageController {
 	public String home() {
 		return "index";
 	}
+
+	@GetMapping("/login")
+	public String login() {
+		return "login";
+	}
+
+	@GetMapping("/signup")
+	public String signup() {
+		return "signup";
+	}
+
+	@GetMapping("/verify-email")
+	public String verifyEmail() {
+		return "verify-email";
+	}
 }
