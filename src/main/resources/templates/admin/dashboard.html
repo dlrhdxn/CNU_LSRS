@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>관리자 대시보드 | LSRS</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <script th:src="@{/js/api.js}" defer></script>
+</head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container admin-page">
+    <h1>관리자 운영 대시보드</h1>
+    <p id="admin-message" role="status" aria-live="polite"></p>
+
+    <section aria-labelledby="dashboard-title">
+        <h2 id="dashboard-title">현재 좌석 현황</h2>
+        <div id="dashboard-metrics" class="metric-grid"></div>
+        <div id="seat-grid" class="seat-grid" aria-live="polite"></div>
+    </section>
+
+    <section aria-labelledby="student-title">
+        <h2 id="student-title">사용자 목록·이용 기록 및 제한 관리</h2>
+        <form id="student-search-form">
+            <label for="student-no">학번 검색</label>
+            <input id="student-no" name="studentNo" placeholder="전체 사용자는 비워 두세요">
+            <button class="button" type="submit">조회</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>로그인 ID</th><th>역할·계정 상태</th><th>역할 변경</th><th>노쇼 횟수</th><th>제한 상태</th><th>현재 예약</th><th>제한 관리</th></tr></thead>
+                <tbody id="student-results"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section aria-labelledby="statistics-title">
+        <h2 id="statistics-title">이용 통계</h2>
+        <form id="statistics-form">
+            <label for="statistics-start">시작 시각</label>
+            <input id="statistics-start" name="startAt" type="datetime-local" required>
+            <label for="statistics-end">종료 시각</label>
+            <input id="statistics-end" name="endAt" type="datetime-local" required>
+            <button class="button" type="submit">통계 조회</button>
+        </form>
+        <p id="statistics-average"></p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>시간대</th><th>사용 인원</th><th>가동률</th></tr></thead>
+                <tbody id="statistics-results"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <dialog id="force-cancel-dialog" aria-labelledby="force-cancel-title">
+        <form id="force-cancel-form">
+            <h2 id="force-cancel-title">예약 강제 취소</h2>
+            <p id="force-cancel-reservation"></p>
+            <label for="force-cancel-reason">취소 사유</label>
+            <select id="force-cancel-reason" name="reason" required>
+                <option value="FACILITY_INSPECTION">시설 긴급 점검</option>
+                <option value="RULE_VIOLATION">이용 규정 위반</option>
+                <option value="SYSTEM_CORRECTION">시스템 오류 보정</option>
+                <option value="ADMIN_OTHER">기타</option>
+            </select>
+            <label>
+                <input id="force-cancel-penalty" name="applyNoShowPenalty" type="checkbox">
+                노쇼 패널티 적용
+            </label>
+            <p>패널티를 적용하면 노쇼 이력에 기록되며, 기준 횟수 도달 시 이용이 제한됩니다.</p>
+            <div class="dialog-actions">
+                <button class="button secondary" type="button" id="force-cancel-dismiss">돌아가기</button>
+                <button class="button" type="submit">취소 확정</button>
+            </div>
+        </form>
+    </dialog>
+
+    <section aria-labelledby="policy-title">
+        <h2 id="policy-title">예약 정책</h2>
+        <div id="policy-summary"></div>
+        <button id="clear-exam-policy" class="button secondary" type="button">시험기간 정책 해제</button>
+        <form id="policy-form">
+            <label for="exam-start-date">시험기간 시작일</label>
+            <input id="exam-start-date" name="startDate" type="date" required>
+            <label for="exam-end-date">시험기간 종료일</label>
+            <input id="exam-end-date" name="endDate" type="date" required>
+            <button class="button" type="submit">시험기간 저장</button>
+        </form>
+    </section>
+</main>
+<script th:src="@{/js/admin.js}" defer></script>
+</body>
+</html>

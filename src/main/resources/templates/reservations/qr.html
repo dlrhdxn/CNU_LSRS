@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('체크인 QR')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container qr-page">
+    <h1>체크인 QR</h1>
+    <p id="qr-message" role="status">도서관 체크인 단말에서 QR을 스캔해 주세요.</p>
+    <img id="reservation-qr" th:src="|data:image/png;base64,${qrImage}|" alt="예약 체크인용 QR 코드">
+    <p th:text="|좌석: ${seatCode}|"></p>
+    <a class="button secondary" th:href="@{/reservations/me}">내 예약으로</a>
+</main>
+</body>
+</html>

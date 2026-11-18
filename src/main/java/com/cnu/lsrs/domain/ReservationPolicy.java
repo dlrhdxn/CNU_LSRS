@@ -80,6 +80,24 @@ public class ReservationPolicy {
 		return !date.isBefore(startDate) && !date.isAfter(endDate);
 	}
 
+	public void updateExamPeriod(LocalDate startDate, LocalDate endDate, int bookingDays, int maxHours) {
+		Objects.requireNonNull(startDate, "startDate");
+		Objects.requireNonNull(endDate, "endDate");
+		if (periodType != PeriodType.EXAM) {
+			throw new IllegalStateException("시험기간 정책만 수정할 수 있습니다.");
+		}
+		if (endDate.isBefore(startDate)) {
+			throw new IllegalArgumentException("시험기간 종료일은 시작일보다 앞설 수 없습니다.");
+		}
+		if (bookingDays < 0 || maxHours <= 0) {
+			throw new IllegalArgumentException("예약 가능 일수는 0 이상, 최대 이용 시간은 1 이상이어야 합니다.");
+		}
+		this.startDate = startDate;
+		this.endDate = endDate;
+		this.bookingDays = bookingDays;
+		this.maxHours = maxHours;
+	}
+
 	public Long getId() {
 		return id;
 	}

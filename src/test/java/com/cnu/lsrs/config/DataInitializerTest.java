@@ -39,12 +39,13 @@ class DataInitializerTest {
 		assertThat(userRepository.count()).isEqualTo(5);
 		assertThat(seatRepository.count()).isEqualTo(20);
 		assertThat(policyRepository.count()).isEqualTo(1);
-		assertThat(reservationRepository.count()).isEqualTo(3);
+		assertThat(reservationRepository.count()).isEqualTo(4);
 
 		assertThat(seatRepository.findBySeatCode("B-08").orElseThrow().getStatus()).isEqualTo(SeatStatus.UNAVAILABLE);
 		assertThat(reservationRepository.findAll())
 				.extracting(r -> r.getStatus())
 				.containsExactlyInAnyOrder(ReservationStatus.RESERVED, ReservationStatus.RESERVED,
+						ReservationStatus.RESERVED,
 						ReservationStatus.CHECKED_IN);
 
 		String hash = userRepository.findByStudentNo("20230001").orElseThrow().getPasswordHash();

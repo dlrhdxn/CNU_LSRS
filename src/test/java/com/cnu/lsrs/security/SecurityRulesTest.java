@@ -15,13 +15,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * URL별 권한 규칙 검증 (FR-U-12).
- * 아직 기능 컨트롤러가 없으므로, 권한을 통과하면 404(경로 없음), 막히면 401/403이 나온다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -66,10 +67,10 @@ class SecurityRulesTest {
 	@Test
 	@WithMockUser(roles = "STUDENT")
 	void 학생은_관리자_API와_체크인_API에_접근할_수_없다() throws Exception {
-		mockMvc.perform(get("/api/admin/dashboard"))
+		mockMvc.perform(get("/api/admin/seats"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.code").value("FORBIDDEN"));
-		mockMvc.perform(post("/api/check-ins")).andExpect(status().isForbidden());
+		mockMvc.perform(post("/api/check-in")).andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -82,15 +83,63 @@ class SecurityRulesTest {
 	@Test
 	@WithMockUser(roles = "KIOSK")
 	void 체크인_단말은_체크인만_가능하다() throws Exception {
-		mockMvc.perform(post("/api/check-ins")).andExpect(status().isNotFound());
+		mockMvc.perform(post("/api/check-in")).andExpect(status().isBadRequest());
 		mockMvc.perform(get("/api/seats")).andExpect(status().isForbidden());
 	}
 
 	@Test
 	@WithMockUser(roles = "ADMIN")
-	void 관리자는_관리자_API_권한을_통과하지만_학생_API는_막힌다() throws Exception {
-		mockMvc.perform(get("/api/admin/dashboard")).andExpect(status().isNotFound());
-		mockMvc.perform(get("/api/seats")).andExpect(status().isForbidden());
+	void 관리자는_관리자와_학생_기능_API에_모두_접근할_수_있다() throws Exception {
+		mockMvc.perform(get("/api/admin/seats")).andExpect(status().isOk());
+		mockMvc.perform(get("/api/admin/users"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].role").value("STUDENT"))
+				.andExpect(jsonPath("$[0].passwordHash").doesNotExist())
+				.andExpect(jsonPath("$[0].verificationCode").doesNotExist());
+		mockMvc.perform(get("/api/admin/statistics")
+						.param("startAt", "2026-11-15T00:00:00")
+						.param("endAt", "2026-11-16T00:00:00"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.points").isArray())
+				.andExpect(jsonPath("$.averageUtilizationRate").exists());
+		mockMvc.perform(delete("/api/admin/policies/exam")).andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/seats")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/reservations/me")).andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void 관리자는_학생의_노쇼_횟수를_초기화할_수_있다() throws Exception {
+		User student = userRepository.findByStudentNo("20230001").orElseThrow();
+
+		mockMvc.perform(patch("/api/admin/{userId}/no-show-count", student.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.userId").value(student.getId()))
+				.andExpect(jsonPath("$.noShowCount").value(0));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void 관리자는_사용자_역할을_변경할_수_있다() throws Exception {
+		User student = userRepository.findByStudentNo("20230001").orElseThrow();
+
+		mockMvc.perform(patch("/api/admin/{userId}/role", student.getId())
+						.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+						.content("{\"role\":\"ADMIN\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.role").value("ADMIN"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void 관리자_대시보드_화면이_렌더링된다() throws Exception {
+		mockMvc.perform(get("/admin")).andExpect(status().isOk());
+	}
+
+	@Test
+	@WithMockUser(roles = "KIOSK")
+	void 체크인_페이지는_없고_API만_사용한다() throws Exception {
+		mockMvc.perform(get("/kiosk/check-in")).andExpect(status().isNotFound());
 	}
 
 	@Test
