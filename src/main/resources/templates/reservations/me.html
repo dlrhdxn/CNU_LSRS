@@ -14,7 +14,7 @@
                 –
                 <span th:text="${reservation.endAt}">종료</span>
             </p>
-            <p>상태: <span th:text="${reservation.status}">RESERVED</span></p>
+            <p>상태: <span th:text="${reservation.statusLabel}">예약중</span></p>
             <p th:if="${reservation.cancelReason != null}"
                th:text="|취소 사유: ${reservation.cancelReason}|"></p>
             <p class="reservation-remaining"

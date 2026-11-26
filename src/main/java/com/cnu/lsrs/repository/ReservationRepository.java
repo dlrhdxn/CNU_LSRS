@@ -67,4 +67,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select r from Reservation r join fetch r.seat where r.id = :id")
 	Optional<Reservation> findByIdWithSeatForUpdate(@Param("id") Long id);
+
+	// ---- B (US-09) ----
+
+	/**
+	 * 체크인 마감이 지난 미체크인 예약을 행 잠금으로 조회 (FR-X-10).
+	 * startAt < cutoff(= now - 15분) 은 now > startAt + 15분 과 같다 (CheckInService의 isAfter 경계와 동일).
+	 * 잠금 중에는 같은 예약의 체크인·취소가 기다린다.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select r from Reservation r where r.status = com.cnu.lsrs.domain.ReservationStatus.RESERVED"
+			+ " and r.startAt < :cutoff")
+	List<Reservation> findNoShowCandidatesForUpdate(@Param("cutoff") LocalDateTime cutoff);
 }
