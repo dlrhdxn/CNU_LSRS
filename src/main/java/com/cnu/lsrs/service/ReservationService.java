@@ -153,6 +153,7 @@ public class ReservationService {
 							reservation.getStartAt().format(DATE_TIME),
 							reservation.getEndAt().format(DATE_TIME),
 							reservation.getStatus().name(),
+							reservation.getStatus().getLabel(),
 							reservation.getCancelReason() == null ? null : reservation.getCancelReason().getLabel(),
 							reservation.getStartAt().atZone(SEOUL).toInstant().toEpochMilli(),
 							reservation.getEndAt().atZone(SEOUL).toInstant().toEpochMilli(),
@@ -167,7 +168,7 @@ public class ReservationService {
 	}
 
 	public record MyReservation(Long reservationId, String seatCode, String startAt, String endAt,
-								String status, String cancelReason, long startAtEpochMillis,
+								String status, String statusLabel, String cancelReason, long startAtEpochMillis,
 								long endAtEpochMillis, Long remainingSeconds, boolean qrAvailable,
 								Long qrRemainingSeconds) {
 	}
